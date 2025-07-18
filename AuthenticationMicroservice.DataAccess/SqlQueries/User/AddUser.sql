@@ -1,0 +1,1 @@
+SELECT * FROM fn_AddUser(@email, @passwordHash, @salt, @isEmailConfirmed, @roleId, @profileImageUrl);

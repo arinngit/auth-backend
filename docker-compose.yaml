@@ -1,0 +1,82 @@
+services:
+  dotnetapp:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "8081:8080"
+
+  postgres:
+    image: postgres:latest
+    restart: always
+    container_name: postgres_container_build
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: build123!@#
+      POSTGRES_DB: BuildDB
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./AuthenticationMicroservice.DataAccess/DbSeed:/docker-entrypoint-initdb.d
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_build
+    ports:
+      - "80:80"
+    depends_on:
+      - dotnetapp
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+
+
+  pgadmin:
+    image: elestio/pgadmin:latest
+    restart: always
+    container_name: pgadmin_build
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: secret{temproary}
+      PGADMIN_LISTEN_PORT: 8080
+    depends_on:
+      - postgres
+    ports:
+      - "0.0.0.0:8080:8080"
+    volumes:
+      - pgAdmin_data:/pgAdmin4/servers.json
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    ports:
+      - "16686:16686"
+      - "6831:6831/udp"
+
+  loki:
+    image: grafana/loki:2.9.2
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+
+volumes:
+  postgres_data:
+  pgAdmin_data:
